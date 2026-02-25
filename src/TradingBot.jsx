@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, AlertCircle, CheckCircle, XCircle, BarChart3, Clock, Activity, GitCompare, Sparkles, Menu, X, Newspaper, Calculator } from 'lucide-react';
-import { callGeminiAPI, callGeminiAPIWithImage, callGeminiAPIForJSON } from './geminiAPI.js';
+import { callOpenAIAPI, callOpenAIAPIWithImage } from './openaiAPI.js';
 
 export default function TradingBot() {
   const [symbol, setSymbol] = useState('');

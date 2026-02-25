@@ -5,9 +5,9 @@ const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = 'gpt-4o-mini';
 
 /**
- * Call Gemini API with text prompt
+ * Call OpenAI API with text prompt
  */
-export async function callGeminiAPI(prompt) {
+export async function callOpenAIAPI(prompt) {
   if (!OPENAI_API_KEY) {
     throw new Error('OpenAI API key not found. Please add VITE_OPENAI_API_KEY to your .env file');
   }
@@ -47,9 +47,9 @@ export async function callGeminiAPI(prompt) {
 }
 
 /**
- * Call Gemini API with image + text
+ * Call OpenAI API with image + text
  */
-export async function callGeminiAPIWithImage(prompt, imageBase64, mimeType) {
+export async function callOpenAIAPIWithImage(prompt, imageBase64, mimeType) {
   if (!OPENAI_API_KEY) {
     throw new Error('OpenAI API key not found. Please add VITE_OPENAI_API_KEY to your .env file');
   }
@@ -67,20 +67,18 @@ export async function callGeminiAPIWithImage(prompt, imageBase64, mimeType) {
       messages: [
         {
           role: 'user',
-          content: [
-          {
-            type: 'text',
-            text: prompt
-          },
-          {
+          content: prompt,
+        },
+        {
+          role: 'user',
+          content: {
             type: 'image_url',
             image_url: {
-              url: `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`
-            }
-          }
-        ]
-        }
-      ]
+              url: `data:${mimeType};base64,${imageBase64}`,
+            },
+          },
+        },
+      ],
     })
   });
 
@@ -97,29 +95,4 @@ export async function callGeminiAPIWithImage(prompt, imageBase64, mimeType) {
   }
 
   return text;
-}
-
-export async function callGeminiAPIForJSON(prompt) {
-  const text = await callGeminiAPI(prompt);
-  return parseJSONFromResponse(text);
-}
-
-/**
- * Parse JSON from Gemini response
- * Handles markdown code blocks and other formatting
- */
-export function parseJSONFromResponse(text) {
-  // Remove markdown code blocks
-  let cleaned = text
-    .replace(/```json\s*/g, '')
-    .replace(/```\s*/g, '')
-    .trim();
-  
-  // Try to find JSON object in the text
-  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    cleaned = jsonMatch[0];
-  }
-  
-  return JSON.parse(cleaned);
 }

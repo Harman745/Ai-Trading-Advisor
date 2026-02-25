@@ -1,105 +1,65 @@
+
+
 # 🚀 AI Trading & Investment Advisor
 
-A comprehensive AI-powered trading analysis and portfolio management tool built with React and Claude AI.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![React](https://img.shields.io/badge/react-18.2.0-blue.svg)
-![AI Powered](https://img.shields.io/badge/AI-Claude%20Sonnet%204-purple.svg)
+An AI-powered trading analysis and portfolio management tool built with React and OpenAI API.
+
+---
+
 
 ## ✨ Features
 
-### 📊 **Single Asset Analysis**
-- Get AI-powered analysis for any stock, crypto, or asset
-- Technical indicators and market sentiment
-- Entry strategy and stop loss recommendations
-- Risk level assessment
+- 📊 **Single Asset Analysis:** AI-powered analysis for stocks, crypto, or other assets. Technical indicators, sentiment, entry/stop loss, and risk assessment.
+- ⚖️ **Compare Investments:** Compare up to 3 assets side-by-side. AI recommendations and portfolio allocation suggestions.
+- 📈 **Chart Analysis:** Upload trading chart images for AI pattern and trend analysis.
+- 🔔 **Price Alerts:** Set custom price alerts for any asset. Multiple alert types and persistent storage.
+- 💼 **Portfolio Tracker:** Track investments and real-time profit/loss.
+- 📰 **News Sentiment Analysis:** Analyze market sentiment from recent news headlines.
+- 🧮 **Risk Calculator:** Calculate position sizes, risk/reward, and money management.
 
-### ⚖️ **Compare Investments**
-- Compare up to 3 assets side-by-side
-- Get AI recommendations on which to invest in
-- See pros, cons, and risk/reward for each
-- Portfolio allocation suggestions
+---
 
-### 📈 **Chart Analysis**
-- Upload any trading chart image
-- AI predicts price direction (UP/DOWN/SIDEWAYS)
-- Identifies chart patterns and technical indicators
-- Provides support/resistance levels and price targets
 
-### 🔔 **Price Alerts**
-- Set custom price alerts for any asset
-- Multiple alert types: above/below price, percentage changes
-- Persistent storage across sessions
-- Manual price checking (click to update)
-
-### 💼 **Portfolio Tracker**
-- Track all your investments in one place
-- Real-time profit/loss calculations
-- Performance breakdown by asset
-- Update prices with one click
-
-### 📰 **News Sentiment Analysis**
-- Analyze market sentiment from recent news
-- Get sentiment scores and price impact predictions
-- See key headlines with impact ratings
-- AI recommendations based on news
-
-### 🧮 **Risk Calculator**
-- Calculate optimal position sizes
-- Risk/reward ratio analysis
-- Stop loss and target price planning
-- Money management guidance
 
 ## 🛠️ Installation
 
-### Prerequisites
-- Node.js 16+ and npm
-- Google Gemini API key ([Get FREE key here](https://aistudio.google.com/app/apikey)) - **No credit card required!**
 
-### Quick Start
+### ⚡ Prerequisites
+- Node.js 16+ and npm
+- OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
+
+
+### 🚀 Quick Start
 
 1. **Clone the repository**
-```bash
-git clone https://github.com/yourusername/ai-trading-advisor.git
-cd ai-trading-advisor
-```
-
+	```bash
+	git clone https://github.com/yourusername/ai-trading-advisor.git
+	cd ai-trading-advisor
+	```
 2. **Install dependencies**
-```bash
-npm install
-```
-
+	```bash
+	npm install
+	```
 3. **Set up environment variables**
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and add your Gemini API key:
-```
-VITE_GEMINI_API_KEY=your_api_key_here
-```
-
+	- Copy `.env.example` to `.env` and add your OpenAI API key:
+	  ```
+	  VITE_OPENAI_API_KEY=your_openai_api_key_here
+	  ```
 4. **Run the development server**
-```bash
-npm run dev
-```
-
+	```bash
+	npm run dev
+	```
 5. **Open your browser**
-Navigate to `http://localhost:5173`
+	- Go to [http://localhost:5173](http://localhost:5173)
 
-## 🔑 Getting a FREE Gemini API Key
 
-1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API Key"
+## 🔑 Getting an OpenAI API Key
+
+1. Go to [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Sign in with your OpenAI account
+3. Click "Create new secret key"
 4. Copy and paste into your `.env` file
-
-**100% FREE - No credit card needed!**
-- 15 requests per minute
-- 1,500 requests per day
-- Perfect for personal use
-
-📖 **Detailed setup guide:** See [GEMINI-SETUP.md](./GEMINI-SETUP.md)
 
 ## 📦 Build for Production
 
@@ -108,6 +68,7 @@ npm run build
 ```
 
 This creates an optimized production build in the `dist` folder.
+
 
 ## 🎯 Usage Guide
 
@@ -146,6 +107,7 @@ This creates an optimized production build in the `dist` folder.
 3. Optionally add target price
 4. Get exact position sizing recommendations
 
+
 ## 💾 Data Storage
 
 Your data is stored locally in your browser using the Storage API:
@@ -153,15 +115,18 @@ Your data is stored locally in your browser using the Storage API:
 - ✅ **Portfolio holdings** - Saved automatically
 - ✅ **Privacy-first** - Data never leaves your device
 
-### Export/Import (Coming Soon)
+
+### ⏳ Export/Import (Coming Soon)
 Backup and restore your data across devices with JSON export/import.
+
 
 ## 🔒 Security & Privacy
 
 - All data stored locally in your browser
-- API calls made directly to Anthropic (no intermediary server)
+- API calls made directly to OpenAI (no intermediary server)
 - Your API key is stored in environment variables (never committed to git)
 - No user tracking or analytics
+
 
 ## 🚨 Disclaimer
 
@@ -175,6 +140,7 @@ Backup and restore your data across devices with JSON export/import.
 
 The AI provides analysis based on available information but cannot predict market movements with certainty.
 
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -185,25 +151,21 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
-- [Google AI](https://ai.google.dev/) for Gemini API (FREE tier!)
-- [Lucide](https://lucide.dev/) for beautiful icons
-- [Tailwind CSS](https://tailwindcss.com/) for styling
-- [Vite](https://vitejs.dev/) for blazing fast development
-
 ## 📧 Contact
 
-If you have any questions or suggestions, please open an issue or contact [your@email.com]
+If you have any questions or suggestions, please open an issue or contact [Harman.singh3@mail.bcu.ac.uk]
+
 
 ## ⭐ Show Your Support
 
 If you found this project helpful, please give it a ⭐️!
 
 ---
+
 
 **Made with ❤️ and AI**
