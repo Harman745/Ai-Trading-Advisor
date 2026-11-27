@@ -1,0 +1,119 @@
+{
+  "single": {
+    "sentiment": "bullish",
+    "confidence": 75,
+    "shouldTrade": "YES",
+    "riskLevel": "medium",
+    "technicalIndicators": [
+      "Indicator 1",
+      "Indicator 2"
+    ],
+    "entryStrategy": "Entry strategy text",
+    "stopLoss": "Stop loss recommendation",
+    "warnings": [
+      "Warning 1",
+      "Warning 2"
+    ],
+    "reasoning": "Brief explanation"
+  },
+  "compare": {
+    "assets": [
+      {
+        "symbol": "BTC",
+        "score": 85,
+        "sentiment": "bullish",
+        "riskLevel": "medium",
+        "potentialReturn": "high",
+        "timeHorizon": "long-term",
+        "pros": [
+          "Pro 1",
+          "Pro 2"
+        ],
+        "cons": [
+          "Con 1",
+          "Con 2"
+        ]
+      }
+    ],
+    "topPick": {
+      "symbol": "BTC",
+      "reason": "Reason for top pick"
+    },
+    "allocation": {
+      "SYMBOL": 50
+    },
+    "overallStrategy": "Investment strategy",
+    "keyInsights": [
+      "Insight 1",
+      "Insight 2"
+    ],
+    "warnings": [
+      "Warning 1",
+      "Warning 2"
+    ]
+  },
+  "chart": {
+    "direction": "UP",
+    "confidence": 75,
+    "reasoning": "Detailed explanation of chart patterns and indicators",
+    "keyPatterns": [
+      "Pattern 1",
+      "Pattern 2"
+    ],
+    "supportLevels": [
+      "Level 1",
+      "Level 2"
+    ],
+    "resistanceLevels": [
+      "Level 1",
+      "Level 2"
+    ],
+    "indicators": {
+      "trend": "bullish",
+      "momentum": "strong",
+      "volume": "increasing"
+    },
+    "prediction": {
+      "shortTerm": "Likely to rise 5-10% in next 1-2 days",
+      "mediumTerm": "Could reach resistance at $X in 1-2 weeks",
+      "targets": [
+        "Target 1: $X",
+        "Target 2: $Y"
+      ]
+    },
+    "riskFactors": [
+      "Risk 1",
+      "Risk 2"
+    ],
+    "recommendation": "BUY/SELL/HOLD with explanation"
+  },
+  "sentiment": {
+    "overallSentiment": "positive",
+    "sentimentScore": 7.5,
+    "confidence": 80,
+    "priceImpact": "bullish",
+    "keyNews": [
+      {
+        "headline": "Hypothetical event",
+        "sentiment": "positive",
+        "impact": "high",
+        "summary": "Brief explanation"
+      }
+    ],
+    "topicsDiscussed": [
+      "Regulation",
+      "Adoption",
+      "Technology"
+    ],
+    "marketMood": "Brief description of overall mood",
+    "recommendation": "Action with explanation",
+    "risks": [
+      "Risk factor 1",
+      "Risk factor 2"
+    ],
+    "catalysts": [
+      "Positive factor 1",
+      "Positive factor 2"
+    ]
+  }
+}

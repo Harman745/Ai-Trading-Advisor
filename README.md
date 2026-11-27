@@ -3,7 +3,7 @@
 # 🚀 AI Trading & Investment Advisor
 
 
-An AI-powered trading analysis and portfolio management tool built with React and OpenAI API.
+A React and Node.js educational trading simulator. Explore AI-generated asset scenarios, analyze an uploaded chart and estimate the value of a practice portfolio. The app has no live price or news feed.
 
 ---
 
@@ -13,9 +13,9 @@ An AI-powered trading analysis and portfolio management tool built with React an
 - 📊 **Single Asset Analysis:** AI-powered analysis for stocks, crypto, or other assets. Technical indicators, sentiment, entry/stop loss, and risk assessment.
 - ⚖️ **Compare Investments:** Compare up to 3 assets side-by-side. AI recommendations and portfolio allocation suggestions.
 - 📈 **Chart Analysis:** Upload trading chart images for AI pattern and trend analysis.
-- 🔔 **Price Alerts:** Set custom price alerts for any asset. Multiple alert types and persistent storage.
-- 💼 **Portfolio Tracker:** Track investments and real-time profit/loss.
-- 📰 **News Sentiment Analysis:** Analyze market sentiment from recent news headlines.
+- 🔔 **Price Alerts:** Check price and percentage thresholds on demand against simulated USD estimates.
+- 💼 **Portfolio Tracker:** See estimated values and simulated gains or losses alongside the purchase prices you entered.
+- 📰 **News Sentiment Analysis:** Explore how hypothetical headlines could affect an asset.
 - 🧮 **Risk Calculator:** Calculate position sizes, risk/reward, and money management.
 
 ---
@@ -26,7 +26,7 @@ An AI-powered trading analysis and portfolio management tool built with React an
 
 
 ### ⚡ Prerequisites
-- Node.js 16+ and npm
+- Node.js 22 or newer and npm
 - OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
 
 
@@ -34,17 +34,17 @@ An AI-powered trading analysis and portfolio management tool built with React an
 
 1. **Clone the repository**
 	```bash
-	git clone https://github.com/yourusername/ai-trading-advisor.git
-	cd ai-trading-advisor
+	git clone https://github.com/Harman745/Ai-Trading-Advisor.git
+	cd Ai-Trading-Advisor
 	```
 2. **Install dependencies**
 	```bash
-	npm install
+	npm ci
 	```
 3. **Set up environment variables**
 	- Copy `.env.example` to `.env` and add your OpenAI API key:
 	  ```
-	  VITE_OPENAI_API_KEY=your_openai_api_key_here
+	  OPENAI_API_KEY=your_openai_api_key_here
 	  ```
 4. **Run the development server**
 	```bash
@@ -67,7 +67,9 @@ An AI-powered trading analysis and portfolio management tool built with React an
 npm run build
 ```
 
-This creates an optimized production build in the `dist` folder.
+Run `npm start` to serve the built site and its same-origin `POST /api/advisor` endpoint. The default port is 3000. A Node host can supply `PORT` and `OPENAI_API_KEY` as runtime environment variables. Uploading only `dist/` to a static host omits the AI endpoint.
+
+Run `npm test` for the offline integration and simulation tests. `npm run preview` also serves the local API. With no server key, the risk calculator and local portfolio editing remain available. AI actions display a setup message.
 
 
 ## 🎯 Usage Guide
@@ -93,13 +95,13 @@ This creates an optimized production build in the `dist` folder.
 ### Price Alerts
 1. Select "Price Alerts"
 2. Enter symbol and set conditions
-3. Click "Check All Alerts Now" to see if any triggered
+3. Click "Check Alert Estimates" to generate simulated prices and check thresholds. A percentage alert takes its first valid estimate as the baseline.
 
 ### Portfolio Tracker
 1. Select "Portfolio Tracker"
 2. Add your holdings with quantity and buy price
-3. Click "Update All Prices" to see current values
-4. Track your profit/loss in real-time
+3. Click "Refresh AI Estimates" to simulate USD values
+4. View estimated profit/loss. Missing estimates stay blank or retain their last successful value and timestamp.
 
 ### Risk Calculator
 1. Select "Risk Calculator"
@@ -110,23 +112,13 @@ This creates an optimized production build in the `dist` folder.
 
 ## 💾 Data Storage
 
-Your data is stored locally in your browser using the Storage API:
-- ✅ **Price alerts** - Saved automatically
-- ✅ **Portfolio holdings** - Saved automatically
-- ✅ **Privacy-first** - Data never leaves your device
+Alerts and holdings are saved in this browser. Your entered quantities and purchase prices are used locally to calculate estimated profit/loss. Refreshing estimates sends the requested asset symbols to the server.
 
+## 🔒 AI requests and configuration
 
-### ⏳ Export/Import (Coming Soon)
-Backup and restore your data across devices with JSON export/import.
+The browser sends analysis requests to the Node server. The server calls OpenAI with its own key. Depending on the feature, OpenAI receives the requested symbols, chart image, or chat question and analysis context.
 
-
-## 🔒 Security & Privacy
-
-- All data stored locally in your browser
-- API calls made directly to OpenAI (no intermediary server)
-- Your API key is stored in environment variables (never committed to git)
-- No user tracking or analytics
-
+Keep the server key in the host's environment or an ignored local `.env` file. If a previous version was deployed with a browser-visible key, revoke that key and use a new one. The single-process server limits AI usage to 60 requests per hour and four concurrent calls across visitors. Restarting the process resets that limit.
 
 ## 🚨 Disclaimer
 
