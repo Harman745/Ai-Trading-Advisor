@@ -73,9 +73,4 @@ const storage = {
   }
 };
 
-// Make it available globally
-if (typeof window !== 'undefined' && !window.storage) {
-  window.storage = storage;
-}
-
 export default storage;

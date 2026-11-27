@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, AlertCircle, CheckCircle, XCircle, BarChart3, Clock, Activity, GitCompare, Sparkles, Menu, X, Newspaper, Calculator } from 'lucide-react';
-import { callOpenAIAPI, callOpenAIAPIWithImage } from './openaiAPI.js';
+import { requestAdvisor } from './openaiAPI.js';
+import { evaluateAlert, hasEstimate, summarizePortfolio } from './estimates.js';
+import storage from './storage.js';
 
 export default function TradingBot() {
   const [symbol, setSymbol] = useState('');
@@ -40,7 +42,7 @@ export default function TradingBot() {
     buyDate: new Date().toISOString().split('T')[0]
   });
   const [updatingPortfolio, setUpdatingPortfolio] = useState(false);
-  const [portfolioStats, setPortfolioStats] = useState(null);
+  const portfolioStats = summarizePortfolio(portfolio);
 
   // News sentiment state
   const [newsSymbol, setNewsSymbol] = useState('');
@@ -57,6 +59,10 @@ export default function TradingBot() {
   });
   const [riskResults, setRiskResults] = useState(null);
 
+  const [errors, setErrors] = useState({});
+  const [asking, setAsking] = useState(false);
+  const showError = (tab, message) => setErrors(previous => ({...previous, [tab]: message}));
+
   // Menu state
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -68,12 +74,8 @@ export default function TradingBot() {
 
   const loadAlerts = async () => {
     try {
-      if (window.storage && window.storage.get) {
-        const result = await window.storage.get('trading-alerts');
-        if (result && result.value) {
-          setAlerts(JSON.parse(result.value));
-        }
-      }
+      const result = await storage.get('trading-alerts');
+      if (result?.value) setAlerts(JSON.parse(result.value));
     } catch (error) {
       console.log('Using in-memory storage - alerts will not persist:', error);
       // Continue without storage - alerts will work but not persist
@@ -82,9 +84,7 @@ export default function TradingBot() {
 
   const saveAlerts = async (alertsList) => {
     try {
-      if (window.storage && window.storage.set) {
-        await window.storage.set('trading-alerts', JSON.stringify(alertsList));
-      }
+      await storage.set('trading-alerts', JSON.stringify(alertsList));
     } catch (error) {
       console.log('Could not save alerts:', error);
       // Continue without saving - alerts will work but not persist
@@ -93,12 +93,8 @@ export default function TradingBot() {
 
   const loadPortfolio = async () => {
     try {
-      if (window.storage && window.storage.get) {
-        const result = await window.storage.get('trading-portfolio');
-        if (result && result.value) {
-          setPortfolio(JSON.parse(result.value));
-        }
-      }
+      const result = await storage.get('trading-portfolio');
+      if (result?.value) setPortfolio(JSON.parse(result.value));
     } catch (error) {
       console.log('Using in-memory storage - portfolio will not persist:', error);
     }
@@ -106,9 +102,7 @@ export default function TradingBot() {
 
   const savePortfolio = async (portfolioList) => {
     try {
-      if (window.storage && window.storage.set) {
-        await window.storage.set('trading-portfolio', JSON.stringify(portfolioList));
-      }
+      await storage.set('trading-portfolio', JSON.stringify(portfolioList));
     } catch (error) {
       console.log('Could not save portfolio:', error);
     }
@@ -121,44 +115,18 @@ export default function TradingBot() {
     setAnalysis(null);
 
     try {
-      const parsed = await callGeminiAPIForJSON(`Analyze ${symbol.toUpperCase()} for trading/investment.
-
-Return ONLY valid JSON with this exact structure (no extra text):
-{
-  "sentiment": "bullish",
-  "confidence": 75,
-  "shouldTrade": "YES",
-  "riskLevel": "medium",
-  "technicalIndicators": ["Indicator 1", "Indicator 2"],
-  "entryStrategy": "Entry strategy text",
-  "stopLoss": "Stop loss recommendation",
-  "warnings": ["Warning 1", "Warning 2"],
-  "reasoning": "Brief explanation"
-}
-
-Use: sentiment (bullish/bearish/neutral), shouldTrade (YES/NO), riskLevel (low/medium/high)`);
-
+      showError('single', '');
+      const parsed = await requestAdvisor('single', {symbol: symbol.trim().toUpperCase()});
       setAnalysis(parsed);
     } catch (error) {
-      console.error("Analysis error:", error);
-      setAnalysis({
-        sentiment: "neutral",
-        confidence: 0,
-        shouldTrade: "NO",
-        riskLevel: "high",
-        technicalIndicators: ["Unable to analyze"],
-        entryStrategy: "Cannot provide strategy",
-        stopLoss: "N/A",
-        warnings: ["Analysis failed - please try again"],
-        reasoning: "Error occurred during analysis"
-      });
+      showError('single', error.message);
     }
 
     setAnalyzing(false);
   };
 
   const compareAssets = async () => {
-    const validSymbols = compareSymbols.filter(s => s.trim());
+    const validSymbols = compareSymbols.map(s => s.trim().toUpperCase()).filter(Boolean);
     if (validSymbols.length < 2) {
       alert('Please enter at least 2 assets to compare');
       return;
@@ -168,47 +136,11 @@ Use: sentiment (bullish/bearish/neutral), shouldTrade (YES/NO), riskLevel (low/m
     setComparison(null);
 
     try {
-      const parsed = await callGeminiAPIForJSON(`Compare these crypto assets for investment: ${validSymbols.join(', ')}
-
-Return ONLY valid JSON (no extra text):
-{
-  "assets": [
-    {
-      "symbol": "BTC",
-      "score": 85,
-      "sentiment": "bullish",
-      "riskLevel": "medium",
-      "potentialReturn": "high",
-      "timeHorizon": "long-term",
-      "pros": ["Pro 1", "Pro 2"],
-      "cons": ["Con 1", "Con 2"]
-    }
-  ],
-  "topPick": {
-    "symbol": "BTC",
-    "reason": "Reason for top pick"
-  },
-  "allocation": {
-    "BTC": 50,
-    "ETH": 30
-  },
-  "overallStrategy": "Investment strategy",
-  "keyInsights": ["Insight 1", "Insight 2"],
-  "warnings": ["Warning 1", "Warning 2"]
-}
-
-Provide realistic analysis for each symbol entered.`);
+      showError('compare', '');
+      const parsed = await requestAdvisor('compare', {symbols: validSymbols});
       setComparison(parsed);
     } catch (error) {
-      console.error("Comparison error:", error);
-      setComparison({
-        assets: [],
-        topPick: { symbol: "N/A", reason: "Analysis failed" },
-        allocation: {},
-        overallStrategy: "Unable to provide strategy",
-        keyInsights: ["Error occurred during comparison"],
-        warnings: ["Please try again"]
-      });
+      showError('compare', error.message);
     }
 
     setComparing(false);
@@ -217,6 +149,15 @@ Provide realistic analysis for each symbol entered.`);
   const handleChartUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      showError('chart', '');
+      if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+        showError('chart', 'Choose a PNG, JPEG, WebP or GIF chart up to 5 MB.');
+        e.target.value = '';
+        setChartImage(null);
+        setChartImagePreview(null);
+        setChartAnalysis(null);
+        return;
+      }
       setChartImage(file);
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -232,6 +173,7 @@ Provide realistic analysis for each symbol entered.`);
       return;
     }
 
+    showError('chart', '');
     setAnalyzingChart(true);
     setChartAnalysis(null);
 
@@ -244,61 +186,10 @@ Provide realistic analysis for each symbol entered.`);
         reader.readAsDataURL(chartImage);
       });
 
-      const responseText = await callGeminiAPIWithImage(`Analyze this trading chart. Provide technical analysis and price prediction.
-
-Return ONLY valid JSON (no extra text):
-{
-  "direction": "UP",
-  "confidence": 75,
-  "reasoning": "Detailed explanation of chart patterns and indicators",
-  "keyPatterns": ["Pattern 1", "Pattern 2"],
-  "supportLevels": ["Level 1", "Level 2"],
-  "resistanceLevels": ["Level 1", "Level 2"],
-  "indicators": {
-    "trend": "bullish",
-    "momentum": "strong",
-    "volume": "increasing"
-  },
-  "prediction": {
-    "shortTerm": "Likely to rise 5-10% in next 1-2 days",
-    "mediumTerm": "Could reach resistance at $X in 1-2 weeks",
-    "targets": ["Target 1: $X", "Target 2: $Y"]
-  },
-  "riskFactors": ["Risk 1", "Risk 2"],
-  "recommendation": "BUY/SELL/HOLD with explanation"
-}
-
-direction should be: UP, DOWN, or SIDEWAYS
-confidence: 0-100 percentage`
-      , base64Data, chartImage.type);
-
-      // Clean up the response
-      let cleanText = responseText
-        .replace(/```json\s*/g, "")
-        .replace(/```\s*/g, "")
-        .trim();
-      
-      const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        cleanText = jsonMatch[0];
-      }
-      
-      const parsed = JSON.parse(cleanText);
-      setChartAnalysis(parsed);
+      const result = await requestAdvisor('chart', {image: base64Data, mimeType: chartImage.type});
+      setChartAnalysis(result);
     } catch (error) {
-      console.error("Chart analysis error:", error);
-      setChartAnalysis({
-        direction: "UNKNOWN",
-        confidence: 0,
-        reasoning: "Failed to analyze chart. Please try again with a clearer image.",
-        keyPatterns: ["Analysis failed"],
-        supportLevels: [],
-        resistanceLevels: [],
-        indicators: { trend: "unknown", momentum: "unknown", volume: "unknown" },
-        prediction: { shortTerm: "N/A", mediumTerm: "N/A", targets: [] },
-        riskFactors: ["Could not analyze chart"],
-        recommendation: "Unable to provide recommendation"
-      });
+      showError('chart', error.message);
     }
 
     setAnalyzingChart(false);
@@ -322,9 +213,9 @@ confidence: 0-100 percentage`
       }
     }
 
-    const alert = {
+    const rule = {
       id: Date.now(),
-      symbol: newAlert.symbol.toUpperCase(),
+      symbol: newAlert.symbol.trim().toUpperCase(),
       condition: newAlert.condition,
       price: newAlert.price ? parseFloat(newAlert.price) : null,
       percentage: newAlert.percentage ? parseFloat(newAlert.percentage) : null,
@@ -333,7 +224,7 @@ confidence: 0-100 percentage`
       triggered: false
     };
 
-    const updatedAlerts = [...alerts, alert];
+    const updatedAlerts = [...alerts, rule];
     setAlerts(updatedAlerts);
     saveAlerts(updatedAlerts);
 
@@ -364,61 +255,18 @@ confidence: 0-100 percentage`
       // Get unique symbols
       const symbols = [...new Set(alerts.map(a => a.symbol))];
 
-      // Check each symbol's current price using AI
-      const parsed = await callGeminiAPIForJSON(`Get current prices for these symbols: ${symbols.join(', ')}
-
-Return ONLY valid JSON with current prices:
-{
-  "prices": {
-    "BTC": 45000,
-    "ETH": 2500
-  }
-}
-
-Use realistic current market prices. If you don't know exact price, provide reasonable estimate.`);
-      const prices = parsed.prices;
-
-      // Check each alert
-      const updatedAlerts = alerts.map(alert => {
-        const currentPrice = prices[alert.symbol];
-        if (!currentPrice) return alert;
-
-        let triggered = false;
-
-        if (alert.condition === 'above' && currentPrice >= alert.price) {
-          triggered = true;
-        } else if (alert.condition === 'below' && currentPrice <= alert.price) {
-          triggered = true;
-        }
-
-        if (triggered && !alert.triggered) {
-          // Show notification
-          alert.status = 'triggered';
-          alert.triggered = true;
-          alert.triggeredAt = new Date().toISOString();
-          alert.triggeredPrice = currentPrice;
-        }
-
-        return alert;
-      });
-
-      setAlerts(updatedAlerts);
-      saveAlerts(updatedAlerts);
-
-      // Show triggered alerts
-      const triggeredAlerts = updatedAlerts.filter(a => a.triggered && a.status === 'triggered');
-      if (triggeredAlerts.length > 0) {
-        const messages = triggeredAlerts.map(a => 
-          `🔔 ${a.symbol}: $${a.triggeredPrice} (${a.condition} $${a.price})`
-        ).join('\n');
-        alert(`ALERTS TRIGGERED!\n\n${messages}`);
-      } else {
-        alert('✓ All alerts checked. No triggers yet.');
-      }
-
+      showError('alerts', '');
+      const {prices} = await requestAdvisor('estimates', {symbols});
+      const checkedAt = new Date().toISOString();
+      const updated = alerts.map(rule => evaluateAlert(rule, prices[rule.symbol], checkedAt));
+      setAlerts(updated);
+      saveAlerts(updated);
+      const count = updated.filter((rule, i) => rule.triggered && !alerts[i].triggered).length;
+      const missing = symbols.filter(symbol => prices[symbol] == null);
+      window.alert(`${count} simulated alert(s) triggered by AI estimates.` +
+        (missing.length ? ` No estimate returned for ${missing.join(', ')}.` : ''));
     } catch (error) {
-      console.error('Alert check error:', error);
-      alert('Failed to check alerts. Please try again.');
+      showError('alerts', error.message);
     }
 
     setCheckingAlerts(false);
@@ -440,11 +288,11 @@ Use realistic current market prices. If you don't know exact price, provide reas
 
     const holding = {
       id: Date.now(),
-      symbol: newHolding.symbol.toUpperCase(),
+      symbol: newHolding.symbol.trim().toUpperCase(),
       quantity: parseFloat(newHolding.quantity),
       buyPrice: parseFloat(newHolding.buyPrice),
       buyDate: newHolding.buyDate,
-      currentPrice: parseFloat(newHolding.buyPrice), // Will be updated
+      currentPrice: null,
       addedAt: new Date().toISOString()
     };
 
@@ -478,58 +326,17 @@ Use realistic current market prices. If you don't know exact price, provide reas
     try {
       const symbols = [...new Set(portfolio.map(h => h.symbol))];
 
-      const parsed = await callGeminiAPIForJSON(`Get current market prices for: ${symbols.join(', ')}
-
-Return ONLY valid JSON:
-{
-  "prices": {
-    "BTC": 45000,
-    "ETH": 2500
-  }
-}
-
-Use realistic current market prices.`);
-      const prices = parsed.prices;
-
-      // Update portfolio with current prices
-      const updatedPortfolio = portfolio.map(holding => ({
-        ...holding,
-        currentPrice: prices[holding.symbol] || holding.currentPrice,
-        lastUpdated: new Date().toISOString()
-      }));
-
-      setPortfolio(updatedPortfolio);
-      savePortfolio(updatedPortfolio);
-
-      // Calculate stats
-      let totalInvested = 0;
-      let totalCurrent = 0;
-
-      updatedPortfolio.forEach(holding => {
-        totalInvested += holding.quantity * holding.buyPrice;
-        totalCurrent += holding.quantity * holding.currentPrice;
-      });
-
-      const totalPL = totalCurrent - totalInvested;
-      const totalPLPercent = (totalPL / totalInvested) * 100;
-
-      setPortfolioStats({
-        totalInvested,
-        totalCurrent,
-        totalPL,
-        totalPLPercent,
-        holdings: updatedPortfolio.map(h => ({
-          symbol: h.symbol,
-          invested: h.quantity * h.buyPrice,
-          current: h.quantity * h.currentPrice,
-          pl: (h.quantity * h.currentPrice) - (h.quantity * h.buyPrice),
-          plPercent: ((h.currentPrice - h.buyPrice) / h.buyPrice) * 100
-        }))
-      });
-
+      showError('portfolio', '');
+      const {prices} = await requestAdvisor('estimates', {symbols});
+      const lastUpdated = new Date().toISOString();
+      const updated = portfolio.map(holding => prices[holding.symbol] == null ? holding :
+        {...holding, currentPrice: prices[holding.symbol], lastUpdated});
+      setPortfolio(updated);
+      savePortfolio(updated);
+      const missing = symbols.filter(symbol => prices[symbol] == null);
+      if (missing.length) showError('portfolio', `No new estimate for ${missing.join(', ')}. Any earlier estimate keeps its original date.`);
     } catch (error) {
-      console.error('Portfolio update error:', error);
-      alert('Failed to update prices. Please try again.');
+      showError('portfolio', error.message);
     }
 
     setUpdatingPortfolio(false);
@@ -545,50 +352,11 @@ Use realistic current market prices.`);
     setNewsSentiment(null);
 
     try {
-      const parsed = await callGeminiAPIForJSON(`Analyze recent news and market sentiment for ${newsSymbol.toUpperCase()}.
-
-Return ONLY valid JSON (no extra text):
-{
-  "overallSentiment": "positive",
-  "sentimentScore": 7.5,
-  "confidence": 80,
-  "priceImpact": "bullish",
-  "keyNews": [
-    {
-      "headline": "Recent development or news",
-      "sentiment": "positive",
-      "impact": "high",
-      "summary": "Brief explanation"
-    }
-  ],
-  "topicsDiscussed": ["Regulation", "Adoption", "Technology"],
-  "marketMood": "Brief description of overall mood",
-  "recommendation": "Action with explanation",
-  "risks": ["Risk factor 1", "Risk factor 2"],
-  "catalysts": ["Positive factor 1", "Positive factor 2"]
-}
-
-Use: overallSentiment (positive/negative/neutral/mixed), priceImpact (bullish/bearish/neutral), sentimentScore (0-10)`);
+      showError('news', '');
+      const parsed = await requestAdvisor('sentiment', {symbol: newsSymbol.trim().toUpperCase()});
       setNewsSentiment(parsed);
     } catch (error) {
-      console.error('News analysis error:', error);
-      setNewsSentiment({
-        overallSentiment: "neutral",
-        sentimentScore: 5,
-        confidence: 0,
-        priceImpact: "neutral",
-        keyNews: [{
-          headline: "Unable to fetch news data",
-          sentiment: "neutral",
-          impact: "low",
-          summary: "Analysis failed. Please try again."
-        }],
-        topicsDiscussed: ["Analysis failed"],
-        marketMood: "Unable to analyze current sentiment",
-        recommendation: "Unable to provide recommendation due to analysis error. Please try again.",
-        risks: ["Could not fetch news data"],
-        catalysts: []
-      });
+      showError('news', error.message);
     }
 
     setAnalyzingNews(false);
@@ -659,7 +427,8 @@ Use: overallSentiment (positive/negative/neutral/mixed), priceImpact (bullish/be
   };
 
   const askQuestion = async () => {
-    if (!userQuestion.trim()) return;
+    if (asking || !userQuestion.trim()) return;
+    setAsking(true);
 
     const newHistory = [...conversationHistory, { role: 'user', content: userQuestion }];
     setConversationHistory(newHistory);
@@ -672,27 +441,12 @@ Use: overallSentiment (positive/negative/neutral/mixed), priceImpact (bullish/be
         ? `Analyzing ${symbol} - ${analysis.sentiment} sentiment, ${analysis.riskLevel} risk`
         : 'No current analysis';
 
-      // Use Gemini API helper for consistent API key usage and error handling
-      const prompt = `You are an expert trading mentor and cryptocurrency investment advisor. Answer questions with:
-- Clear, actionable advice
-- Risk warnings when appropriate
-- Educational insights
-- Real-world context
-
-Context: ${contextInfo}
-
-User question: ${userQuestion}`;
-
-      // Import callGeminiAPI from geminiAPI.js
-      const aiResponse = await callGeminiAPI(prompt);
-
-      setConversationHistory([...newHistory, { role: 'assistant', content: aiResponse }]);
+      const answer = await requestAdvisor('question', {question: userQuestion, context: contextInfo});
+      setConversationHistory([...newHistory, {role: 'assistant', content: answer}]);
     } catch (error) {
-      console.error("Question error:", error);
-      setConversationHistory([...newHistory, { 
-        role: 'assistant', 
-        content: "I encountered an error processing your question. Please try again." 
-      }]);
+      setConversationHistory([...newHistory, {role: 'assistant', content: error.message}]);
+    } finally {
+      setAsking(false);
     }
   };
 
@@ -734,7 +488,7 @@ User question: ${userQuestion}`;
             <Activity className="w-12 h-12 text-blue-400" />
             <h1 className="text-4xl font-bold text-white">AI Trading & Investment Advisor</h1>
           </div>
-          <p className="text-blue-200">Your complete trading analysis and portfolio management suite</p>
+          <p className="text-blue-200">Educational simulation · Prices are AI-generated estimates. No live market or news feed.</p>
         </div>
 
         {/* Hamburger Menu Button */}
@@ -748,7 +502,7 @@ User question: ${userQuestion}`;
               {activeTab === 'single' && 'Single Analysis'}
               {activeTab === 'compare' && 'Compare Investments'}
               {activeTab === 'chart' && 'Chart Analysis'}
-              {activeTab === 'alerts' && 'Price Alerts'}
+              {activeTab === 'alerts' && 'Simulated Price Alerts'}
               {activeTab === 'portfolio' && 'Portfolio Tracker'}
               {activeTab === 'news' && 'News Sentiment'}
               {activeTab === 'risk' && 'Risk Calculator'}
@@ -817,8 +571,8 @@ User question: ${userQuestion}`;
               >
                 <AlertCircle className="w-5 h-5 text-orange-600" />
                 <div className="flex-1">
-                  <p className="font-bold text-gray-900">Price Alerts</p>
-                  <p className="text-xs text-gray-600">Set custom price notifications</p>
+                  <p className="font-bold text-gray-900">Simulated Price Alerts</p>
+                  <p className="text-xs text-gray-600">Test thresholds against AI-generated estimates</p>
                 </div>
                 {alerts.filter(a => a.triggered && a.status === 'triggered').length > 0 && (
                   <span className="bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
@@ -854,7 +608,7 @@ User question: ${userQuestion}`;
                 <Newspaper className="w-5 h-5 text-cyan-600" />
                 <div>
                   <p className="font-bold text-gray-900">News Sentiment</p>
-                  <p className="text-xs text-gray-600">Analyze market news & sentiment</p>
+                  <p className="text-xs text-gray-600">Explore hypothetical news scenarios</p>
                 </div>
               </button>
 
@@ -877,6 +631,7 @@ User question: ${userQuestion}`;
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Main Analysis Panel */}
           <div className="lg:col-span-2 bg-white rounded-xl shadow-2xl p-6">
+            {errors[activeTab] && <p role="alert" className="mb-4 rounded bg-amber-50 p-3 text-amber-900">{errors[activeTab]}</p>}
             {activeTab === 'single' ? (
               /* Single Asset Analysis */
               <>
@@ -1011,7 +766,7 @@ User question: ${userQuestion}`;
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
                       onChange={handleChartUpload}
                       className="hidden"
                       id="chart-upload"
@@ -1033,7 +788,7 @@ User question: ${userQuestion}`;
                             Upload Trading Chart
                           </p>
                           <p className="text-sm text-gray-500">
-                            Click to select or drag & drop
+                            Choose a PNG, JPEG, WebP or GIF up to 5 MB
                           </p>
                         </>
                       )}
@@ -1224,7 +979,7 @@ User question: ${userQuestion}`;
               <>
                 <div className="flex items-center gap-2 mb-4">
                   <AlertCircle className="w-6 h-6 text-orange-600" />
-                  <h2 className="text-2xl font-bold text-gray-800">Price Alerts</h2>
+                  <h2 className="text-2xl font-bold text-gray-800">Simulated Price Alerts</h2>
                 </div>
 
                 <div className="space-y-4">
@@ -1293,6 +1048,7 @@ User question: ${userQuestion}`;
                       )}
 
                       <button
+                        disabled={checkingAlerts}
                         onClick={addAlert}
                         className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
                       >
@@ -1312,12 +1068,12 @@ User question: ${userQuestion}`;
                       {checkingAlerts ? (
                         <>
                           <Clock className="w-5 h-5 animate-spin" />
-                          Checking Prices...
+                          Checking estimates...
                         </>
                       ) : (
                         <>
                           <CheckCircle className="w-5 h-5" />
-                          Check All Alerts Now
+                          Check Alert Estimates
                         </>
                       )}
                     </button>
@@ -1363,15 +1119,15 @@ User question: ${userQuestion}`;
                                 </div>
 
                                 <div className="text-sm text-gray-700 mb-1">
-                                  {alert.condition === 'above' && `Alert when price goes above $${alert.price}`}
-                                  {alert.condition === 'below' && `Alert when price goes below $${alert.price}`}
-                                  {alert.condition === 'change_up' && `Alert when price increases by ${alert.percentage}%`}
-                                  {alert.condition === 'change_down' && `Alert when price decreases by ${alert.percentage}%`}
+                                  {alert.condition === 'above' && `Trigger when the estimate goes above $${alert.price}`}
+                                  {alert.condition === 'below' && `Trigger when the estimate goes below $${alert.price}`}
+                                  {alert.condition === 'change_up' && `Trigger when the estimate increases by ${alert.percentage}%`}
+                                  {alert.condition === 'change_down' && `Trigger when the estimate decreases by ${alert.percentage}%`}
                                 </div>
 
                                 {alert.triggered && alert.triggeredPrice && (
                                   <div className="text-sm font-semibold text-red-600">
-                                    Triggered at ${alert.triggeredPrice} on {new Date(alert.triggeredAt).toLocaleString()}
+                                    Triggered on an AI estimate of ${alert.triggeredPrice} on {new Date(alert.triggeredAt).toLocaleString()}
                                   </div>
                                 )}
 
@@ -1381,6 +1137,7 @@ User question: ${userQuestion}`;
                               </div>
 
                               <button
+                                disabled={checkingAlerts}
                                 onClick={() => deleteAlert(alert.id)}
                                 className="text-red-600 hover:text-red-700 font-semibold text-sm ml-4"
                               >
@@ -1400,9 +1157,10 @@ User question: ${userQuestion}`;
                       How Alerts Work
                     </h4>
                     <ul className="text-sm text-blue-800 space-y-1">
+                      <li>• Checks run on demand using simulated USD prices</li>
                       <li>• Alerts are saved and persist across sessions</li>
-                      <li>• Click "Check All Alerts Now" to see if any have triggered</li>
-                      <li>• Triggered alerts will show with a red banner</li>
+                      <li>• Click "Check Alert Estimates" to see if any have triggered</li>
+                      <li>• Percentage alerts use the first AI estimate as their baseline</li>
                       <li>• You can create multiple alerts for the same symbol</li>
                       <li>• Delete alerts you no longer need</li>
                     </ul>
@@ -1418,21 +1176,24 @@ User question: ${userQuestion}`;
                 </div>
 
                 <div className="space-y-4">
+                  {portfolio.length > 0 && !portfolioStats && (
+                    <p className="text-sm text-indigo-900">Refresh AI estimates to value your holdings. The total appears once every holding has an estimate.</p>
+                  )}
                   {/* Portfolio Summary */}
                   {portfolioStats && (
                     <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-lg">
-                      <h3 className="text-lg font-semibold mb-4 opacity-90">Total Portfolio Value</h3>
+                      <h3 className="text-lg font-semibold mb-4 opacity-90">Estimated Portfolio Value</h3>
                       <div className="grid md:grid-cols-3 gap-4">
                         <div>
                           <p className="text-sm opacity-80 mb-1">Invested</p>
                           <p className="text-2xl font-bold">${portfolioStats.totalInvested.toFixed(2)}</p>
                         </div>
                         <div>
-                          <p className="text-sm opacity-80 mb-1">Current Value</p>
+                          <p className="text-sm opacity-80 mb-1">Estimated Value</p>
                           <p className="text-2xl font-bold">${portfolioStats.totalCurrent.toFixed(2)}</p>
                         </div>
                         <div>
-                          <p className="text-sm opacity-80 mb-1">Profit/Loss</p>
+                          <p className="text-sm opacity-80 mb-1">Estimated Profit/Loss</p>
                           <p className={`text-2xl font-bold ${portfolioStats.totalPL >= 0 ? 'text-green-300' : 'text-red-300'}`}>
                             {portfolioStats.totalPL >= 0 ? '+' : ''}${portfolioStats.totalPL.toFixed(2)}
                           </p>
@@ -1504,6 +1265,7 @@ User question: ${userQuestion}`;
                     </div>
 
                     <button
+                      disabled={updatingPortfolio}
                       onClick={addHolding}
                       className="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
@@ -1522,12 +1284,12 @@ User question: ${userQuestion}`;
                       {updatingPortfolio ? (
                         <>
                           <Clock className="w-5 h-5 animate-spin" />
-                          Updating Prices...
+                          Generating estimates...
                         </>
                       ) : (
                         <>
                           <TrendingUp className="w-5 h-5" />
-                          Update All Prices
+                          Refresh AI Estimates
                         </>
                       )}
                     </button>
@@ -1549,6 +1311,7 @@ User question: ${userQuestion}`;
                       <div className="space-y-3">
                         {portfolio.map((holding) => {
                           const invested = holding.quantity * holding.buyPrice;
+                          const estimated = hasEstimate(holding);
                           const current = holding.quantity * holding.currentPrice;
                           const pl = current - invested;
                           const plPercent = (pl / invested) * 100;
@@ -1571,6 +1334,7 @@ User question: ${userQuestion}`;
                                   </p>
                                 </div>
                                 <button
+                                  disabled={updatingPortfolio}
                                   onClick={() => deleteHolding(holding.id)}
                                   className="text-red-600 hover:text-red-700 font-semibold text-sm"
                                 >
@@ -1584,27 +1348,27 @@ User question: ${userQuestion}`;
                                   <p className="font-bold text-gray-900">${invested.toFixed(2)}</p>
                                 </div>
                                 <div className="bg-gray-50 p-2 rounded">
-                                  <p className="text-xs text-gray-600 mb-1">Current Price</p>
-                                  <p className="font-bold text-gray-900">${holding.currentPrice.toFixed(2)}</p>
+                                  <p className="text-xs text-gray-600 mb-1">AI Price Estimate</p>
+                                  <p className="font-bold text-gray-900">{estimated ? `$${holding.currentPrice.toFixed(2)}` : 'Awaiting estimate'}</p>
                                 </div>
                                 <div className="bg-gray-50 p-2 rounded">
-                                  <p className="text-xs text-gray-600 mb-1">Current Value</p>
-                                  <p className="font-bold text-gray-900">${current.toFixed(2)}</p>
+                                  <p className="text-xs text-gray-600 mb-1">Estimated Value</p>
+                                  <p className="font-bold text-gray-900">{estimated ? `$${current.toFixed(2)}` : '—'}</p>
                                 </div>
-                                <div className={`p-2 rounded ${pl >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                                  <p className="text-xs text-gray-600 mb-1">Profit/Loss</p>
+                                <div className={`p-2 rounded ${!estimated ? 'bg-gray-50' : pl >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                                  <p className="text-xs text-gray-600 mb-1">Estimated Profit/Loss</p>
                                   <p className={`font-bold ${pl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    {pl >= 0 ? '+' : ''}${pl.toFixed(2)}
+                                    {estimated ? `${pl >= 0 ? '+' : ''}$${pl.toFixed(2)}` : '—'}
                                   </p>
                                   <p className={`text-xs font-semibold ${pl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    ({pl >= 0 ? '+' : ''}{plPercent.toFixed(2)}%)
+                                    {estimated && `(${pl >= 0 ? '+' : ''}${plPercent.toFixed(2)}%)`}
                                   </p>
                                 </div>
                               </div>
 
                               {holding.lastUpdated && (
                                 <p className="text-xs text-gray-500">
-                                  Last updated: {new Date(holding.lastUpdated).toLocaleString()}
+                                  Estimate generated: {new Date(holding.lastUpdated).toLocaleString()}
                                 </p>
                               )}
                             </div>
@@ -1617,7 +1381,7 @@ User question: ${userQuestion}`;
                   {/* Individual Performance */}
                   {portfolioStats && portfolioStats.holdings.length > 0 && (
                     <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-bold mb-3 text-blue-900">Performance Breakdown</h4>
+                      <h4 className="font-bold mb-3 text-blue-900">Estimated Performance</h4>
                       <div className="space-y-2">
                         {portfolioStats.holdings.map((h, i) => (
                           <div key={i} className="flex items-center justify-between">
@@ -1652,20 +1416,20 @@ User question: ${userQuestion}`;
                     </h4>
                     <ul className="text-sm text-indigo-800 space-y-1">
                       <li>• Add your investments with quantity and buy price</li>
-                      <li>• Click "Update All Prices" to get current market values</li>
-                      <li>• See real-time profit/loss for each holding</li>
-                      <li>• Track overall portfolio performance</li>
+                      <li>• Click "Refresh AI Estimates" to generate simulated values in USD</li>
+                      <li>• Estimated profit/loss uses your buy price and the last AI estimate</li>
+                      <li>• The portfolio total appears once every holding has an estimate</li>
                       <li>• Your portfolio is saved automatically</li>
                     </ul>
                   </div>
                 </div>
               </>
             ) : activeTab === 'news' ? (
-              /* News Sentiment Analysis */
+              /* Simulated News Sentiment */
               <>
                 <div className="flex items-center gap-2 mb-4">
                   <Newspaper className="w-6 h-6 text-cyan-600" />
-                  <h2 className="text-2xl font-bold text-gray-800">News Sentiment Analysis</h2>
+                  <h2 className="text-2xl font-bold text-gray-800">Simulated News Sentiment</h2>
                 </div>
 
                 <div className="space-y-4">
@@ -1691,12 +1455,12 @@ User question: ${userQuestion}`;
                     {analyzingNews ? (
                       <>
                         <Clock className="w-5 h-5 animate-spin" />
-                        Analyzing News...
+                        Simulating scenarios...
                       </>
                     ) : (
                       <>
                         <Newspaper className="w-5 h-5" />
-                        Analyze News Sentiment
+                        Simulate News Sentiment
                       </>
                     )}
                   </button>
@@ -1762,7 +1526,7 @@ User question: ${userQuestion}`;
                         <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
                           <h4 className="font-bold mb-3 text-gray-900 flex items-center gap-2">
                             <Newspaper className="w-5 h-5" />
-                            Key News Headlines
+                            Hypothetical Headlines
                           </h4>
                           <div className="space-y-3">
                             {newsSentiment.keyNews.map((news, i) => (
@@ -2090,7 +1854,7 @@ User question: ${userQuestion}`;
 
                   <button
                     onClick={compareAssets}
-                    disabled={comparing || compareSymbols.filter(s => s.trim()).length < 2}
+                    disabled={comparing || compareSymbols.map(s => s.trim().toUpperCase()).filter(Boolean).length < 2}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     {comparing ? (
@@ -2264,6 +2028,7 @@ User question: ${userQuestion}`;
             <div className="flex gap-2">
               <input
                 type="text"
+                maxLength={3000}
                 value={userQuestion}
                 onChange={(e) => setUserQuestion(e.target.value)}
                 placeholder="Ask about crypto, strategies, risk..."
@@ -2272,7 +2037,7 @@ User question: ${userQuestion}`;
               />
               <button
                 onClick={askQuestion}
-                disabled={!userQuestion.trim()}
+                disabled={asking || !userQuestion.trim()}
                 className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold px-6 rounded-lg transition-colors"
               >
                 Ask
